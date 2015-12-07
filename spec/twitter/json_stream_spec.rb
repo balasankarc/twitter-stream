@@ -24,7 +24,7 @@ describe JSONStream do
   context "authentication" do
     it "should connect with basic auth credentials" do
       connect_stream :auth => "username:password", :ssl => false
-      $recieved_data.should include('Authorization: Basic')
+      expect($recieved_data).to include('Authorization: Basic')
     end
 
     it "should connect with oauth credentials" do
@@ -35,44 +35,44 @@ describe JSONStream do
         :access_secret => 'ohno'
       }
       connect_stream :oauth => oauth, :ssl => false
-      $recieved_data.should include('Authorization: OAuth')
+      expect($recieved_data).to include('Authorization: OAuth')
     end
   end
 
   context "on create" do
 
     it "should return stream" do
-      EM.should_receive(:connect).and_return('TEST INSTANCE')
+      expect(EM).to receive(:connect).and_return('TEST INSTANCE')
       stream = JSONStream.connect {}
-      stream.should == 'TEST INSTANCE'
+      expect(stream).to eq('TEST INSTANCE')
     end
 
     it "should define default properties" do
-      EM.should_receive(:connect).with do |host, port, handler, opts|
-        host.should == 'stream.twitter.com'
-        port.should == 443
-        opts[:path].should == '/1/statuses/filter.json'
-        opts[:method].should == 'GET'
-      end
+      expect(EM).to receive(:connect).with(any_args) { |host, port, handler, opts|
+        expect(host).to eq('stream.twitter.com')
+        expect(port).to eq(443)
+        expect(opts[:path]).to eq('/1/statuses/filter.json')
+        expect(opts[:method]).to eq('GET')
+      }
       stream = JSONStream.connect {}
     end
 
     it "should connect to the proxy if provided" do
-      EM.should_receive(:connect).with do |host, port, handler, opts|
-        host.should == 'my-proxy'
-        port.should == 8080
-        opts[:host].should == 'stream.twitter.com'
-        opts[:port].should == 443
-        opts[:proxy].should == 'http://my-proxy:8080'
-      end
+      expect(EM).to receive(:connect).with(any_args) { |host, port, handler, opts|
+        expect(host).to eq('my-proxy')
+        expect(port).to eq(8080)
+        expect(opts[:host]).to eq('stream.twitter.com')
+        expect(opts[:port]).to eq(443)
+        expect(opts[:proxy]).to eq('http://my-proxy:8080')
+      }
       stream = JSONStream.connect(:proxy => "http://my-proxy:8080") {}
     end
 
     it "should not trigger SSL until connection is established" do
-      connection = stub('connection')
-      EM.should_receive(:connect).and_return(connection)
+      connection = double('connection')
+      expect(EM).to receive(:connect).and_return(connection)
       stream = JSONStream.connect(:ssl => true)
-      stream.should == connection
+      expect(stream).to eq(connection)
     end
 
   end
@@ -89,34 +89,34 @@ describe JSONStream do
 
     it "should add no params" do
       connect_stream :ssl => false
-      $recieved_data.should include('/1/statuses/filter.json HTTP')
+      expect($recieved_data).to include('/1/statuses/filter.json HTTP')
     end
 
     it "should add custom params" do
       connect_stream :params => {:name => 'test'},  :ssl => false
-      $recieved_data.should include('?name=test')
+      expect($recieved_data).to include('?name=test')
     end
 
     it "should parse headers" do
       connect_stream :ssl => false
-      stream.code.should == 200
-      stream.headers.keys.map{|k| k.downcase}.should include('content-type')
+      expect(stream.code).to eq(200)
+      expect(stream.headers.keys.map{|k| k.downcase}).to include('content-type')
     end
 
     it "should parse headers even after connection close" do
       connect_stream :ssl => false
-      stream.code.should == 200
-      stream.headers.keys.map{|k| k.downcase}.should include('content-type')
+      expect(stream.code).to eq(200)
+      expect(stream.headers.keys.map{|k| k.downcase}).to include('content-type')
     end
 
     it "should extract records" do
       connect_stream :user_agent => 'TEST_USER_AGENT',  :ssl => false
-      $recieved_data.upcase.should include('USER-AGENT: TEST_USER_AGENT')
+      expect($recieved_data.upcase).to include('USER-AGENT: TEST_USER_AGENT')
     end
 
     it 'should allow custom headers' do
       connect_stream :headers => { 'From' => 'twitter-stream' },  :ssl => false
-      $recieved_data.upcase.should include('FROM: TWITTER-STREAM')
+      expect($recieved_data.upcase).to include('FROM: TWITTER-STREAM')
     end
 
     it "should deliver each item" do
@@ -128,9 +128,9 @@ describe JSONStream do
       end
       # Extract only the tweets from the fixture
       tweets = $body.map{|l| l.strip }.select{|l| l =~ /^\{/ }
-      items.size.should == tweets.size
+      expect(items.size).to eq(tweets.size)
       tweets.each_with_index do |tweet,i|
-        items[i].should == tweet
+        expect(items[i]).to eq(tweet)
       end
     end
 
@@ -159,33 +159,33 @@ describe JSONStream do
   shared_examples_for "network failure" do
     it "should reconnect on network failure" do
       connect_stream do
-        stream.should_receive(:reconnect)
+        expect(stream).to receive(:reconnect)
       end
     end
 
     it "should not reconnect on network failure when not configured to auto reconnect" do
       connect_stream(:auto_reconnect => false) do
-        stream.should_receive(:reconnect).never
+        expect(stream).to receive(:reconnect).never
       end
     end
 
     it "should reconnect with 0.25 at base" do
       connect_stream do
-        stream.should_receive(:reconnect_after).with(0.25)
+        expect(stream).to receive(:reconnect_after).with(0.25)
       end
     end
 
     it "should reconnect with linear timeout" do
       connect_stream do
         stream.nf_last_reconnect = 1
-        stream.should_receive(:reconnect_after).with(1.25)
+        expect(stream).to receive(:reconnect_after).with(1.25)
       end
     end
 
     it "should stop reconnecting after 100 times" do
       connect_stream do
         stream.reconnect_retries = 100
-        stream.should_not_receive(:reconnect_after)
+        expect(stream).not_to receive(:reconnect_after)
       end
     end
 
@@ -197,8 +197,8 @@ describe JSONStream do
         end
         stream.reconnect_retries = 100
       end
-      timeout.should == 0.25
-      retries.should == 101
+      expect(timeout).to eq(0.25)
+      expect(retries).to eq(101)
     end
   end
 
@@ -211,19 +211,19 @@ describe JSONStream do
 
     it "should timeout on inactivity" do
       connect_stream :stop_in => 1.5 do
-        stream.should_receive(:reconnect)
+        expect(stream).to receive(:reconnect)
       end
     end
 
     it "should not reconnect on inactivity when not configured to auto reconnect" do
       connect_stream(:stop_in => 1.5, :auto_reconnect => false) do
-        stream.should_receive(:reconnect).never
+        expect(stream).to receive(:reconnect).never
       end
     end
 
     it "should reconnect with SSL if enabled" do
       connect_stream :ssl => true do
-        stream.should_receive(:start_tls).twice
+        expect(stream).to receive(:start_tls).twice
       end
     end
 
@@ -240,7 +240,7 @@ describe JSONStream do
     it "should call no data callback after no data received for 90 seconds" do
       connect_stream :stop_in => 6 do
         stream.last_data_received_at = Time.now - 88
-        stream.should_receive(:no_data).once
+        expect(stream).to receive(:no_data).once
       end
     end
 
@@ -271,27 +271,27 @@ describe JSONStream do
 
     it "should reconnect on application failure 10 at base" do
       connect_stream :ssl => false do
-        stream.should_receive(:reconnect_after).with(10)
+        expect(stream).to receive(:reconnect_after).with(10)
       end
     end
 
     it "should not reconnect on application failure 10 at base when not configured to auto reconnect" do
       connect_stream  :ssl => false, :auto_reconnect => false do
-        stream.should_receive(:reconnect_after).never
+        expect(stream).to receive(:reconnect_after).never
       end
     end
 
     it "should reconnect with exponential timeout" do
       connect_stream :ssl => false do
         stream.af_last_reconnect = 160
-        stream.should_receive(:reconnect_after).with(320)
+        expect(stream).to receive(:reconnect_after).with(320)
       end
     end
 
     it "should not try to reconnect after limit is reached" do
       connect_stream :ssl => false do
         stream.af_last_reconnect = 320
-        stream.should_not_receive(:reconnect_after)
+        expect(stream).not_to receive(:reconnect_after)
       end
     end
   end
@@ -312,9 +312,9 @@ describe JSONStream do
           items << item
         end
       end
-      items.size.should == 2
-      items[0].should == '{"screen_name":"user1"}'
-      items[1].should == '{"id":9876}'
+      expect(items.size).to eq(2)
+      expect(items[0]).to eq('{"screen_name":"user1"}')
+      expect(items[1]).to eq('{"id":9876}')
     end
 
     it "should parse full entities even if split" do
@@ -326,9 +326,9 @@ describe JSONStream do
           items << item
         end
       end
-      items.size.should == 2
-      items[0].should == '{"id":1234}'
-      items[1].should == '{"id":9876}'
+      expect(items.size).to eq(2)
+      expect(items[0]).to eq('{"id":1234}')
+      expect(items[1]).to eq('{"id":9876}')
     end
   end
 
